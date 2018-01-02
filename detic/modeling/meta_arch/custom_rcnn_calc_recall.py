@@ -54,9 +54,6 @@ class CustomRCNN(GeneralizedRCNN):
             self.num_classes = kwargs.pop('num_classes')
             self.num_sample_cats = kwargs.pop('num_sample_cats')
         super().__init__(**kwargs)
-        # 冻结
-        self.backbone.requires_grad_(False)
-
         assert self.proposal_generator is not None
         if self.with_caption:
             assert not self.dynamic_classifier
@@ -100,6 +97,13 @@ class CustomRCNN(GeneralizedRCNN):
         features = self.backbone(images.tensor)
         proposals, _ = self.proposal_generator(images, features, None)
         results, _ = self.roi_heads(images, features, proposals)
+        # do_postprocess proposals
+        if do_postprocess:
+            assert not torch.jit.is_scripting(), \
+                "Scripting is not supported for postprocess."
+            return CustomRCNN._postprocess(
+                proposals, batched_inputs, images.image_sizes)
+        # do_postprocess results
         if do_postprocess:
             assert not torch.jit.is_scripting(), \
                 "Scripting is not supported for postprocess."
@@ -159,6 +163,8 @@ class CustomRCNN(GeneralizedRCNN):
         classifier_info = cls_features, cls_inds, caption_features
         proposals, proposal_losses = self.proposal_generator(
             images, features, gt_instances)
+        # test RNP Recall
+        return proposals
 
         if self.roi_head_name in ['StandardROIHeads', 'CascadeROIHeads']:
             proposals, detector_losses = self.roi_heads(

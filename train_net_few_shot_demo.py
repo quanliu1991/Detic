@@ -8,6 +8,8 @@ from torch.nn.parallel import DistributedDataParallel
 import time
 import datetime
 
+os.environ['CUDA_VISIBLE_DEVICES']="0,1"
+
 from fvcore.common.timer import Timer
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
@@ -78,6 +80,7 @@ def do_test(cfg, model):
                 evaluator = CustomCOCOEvaluator(dataset_name, cfg, True, output_folder)
             else:
                 evaluator = COCOEvaluator(dataset_name, cfg, True, output_folder)
+                print("COCOEvaluator")
         elif evaluator_type == 'oid':
             evaluator = OIDEvaluator(dataset_name, cfg, True, output_folder)
         else:
@@ -181,9 +184,13 @@ def do_train(cfg, model, resume=False):
             storage.put_scalars(time=step_time)
             data_timer.reset()
             scheduler.step()
+            # if (cfg.TEST.EVAL_PERIOD > 0
+            #     and iteration % cfg.TEST.EVAL_PERIOD == 0
+            #     and iteration != max_iter):
+            #     do_test(cfg, model)
+            #     comm.synchronize()
 
-            if (cfg.TEST.EVAL_PERIOD > 0
-                and iteration % cfg.TEST.EVAL_PERIOD == 0
+            if (iteration % 100== 0
                 and iteration != max_iter):
                 do_test(cfg, model)
                 comm.synchronize()
@@ -237,8 +244,11 @@ def main(args):
             model, device_ids=[comm.get_local_rank()], broadcast_buffers=False,
             find_unused_parameters=cfg.FIND_UNUSED_PARAM
         )
-
+    logger.info("========== ")
+    do_test(cfg, model)
+    logger.info("========== ")
     do_train(cfg, model, resume=args.resume)
+    logger.info("========== ")
     return do_test(cfg, model)
 
 
@@ -268,3 +278,6 @@ if __name__ == "__main__":
         dist_url=args.dist_url,
         args=(args,),
     )
+
+# --num-gpus 4 --config-file /home/lq/projects/Detic/configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml  "MODEL.WEIGHTS" "/home/lq/projects/Detic/models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+#model_0:/home/lq/projects/Detic/output/Detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size_model_0/model_final.pth

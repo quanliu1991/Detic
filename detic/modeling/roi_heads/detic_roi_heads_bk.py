@@ -191,15 +191,11 @@ class DeticCascadeROIHeads(CascadeROIHeads):
                     device=proposals[0].objectness_logits.device))
             return proposals, losses
         else:
-            # print("===========",proposals)
+            print("===========",len(proposals[0].proposal_boxes))
             pred_instances = self._forward_box(
                 features, proposals, classifier_info=classifier_info)
             pred_instances = self.forward_with_given_boxes(features, pred_instances)
             return pred_instances, {}
-
-    def draw_proposal_box(self,images,proposals):
-        pro_box = proposals[0].proposal_boxes
-        pro_conf= proposals[0].scores
 
 
     def get_top_proposals(self, proposals):

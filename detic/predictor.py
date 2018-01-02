@@ -54,8 +54,10 @@ class VisualizationDemo(object):
             self.metadata = MetadataCatalog.get(
                 BUILDIN_METADATA_PATH[args.vocabulary])
             classifier = BUILDIN_CLASSIFIER[args.vocabulary]
+        # self.metadata = MetadataCatalog.get("mts_train")
 
         num_classes = len(self.metadata.thing_classes)
+        print(num_classes)
         self.cpu_device = torch.device("cpu")
         self.instance_mode = instance_mode
 
@@ -65,6 +67,7 @@ class VisualizationDemo(object):
             self.predictor = AsyncPredictor(cfg, num_gpus=num_gpu)
         else:
             self.predictor = DefaultPredictor(cfg)
+        print(self.predictor.model.roi_heads.num_classes)
         reset_cls_test(self.predictor.model, classifier, num_classes)
 
     def run_on_image(self, image):
@@ -79,6 +82,8 @@ class VisualizationDemo(object):
         """
         vis_output = None
         predictions = self.predictor(image)
+
+        # print(predictions)
         # Convert image from OpenCV BGR format to Matplotlib RGB format.
         image = image[:, :, ::-1]
         visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
@@ -94,8 +99,9 @@ class VisualizationDemo(object):
                 )
             if "instances" in predictions:
                 instances = predictions["instances"].to(self.cpu_device)
+                # 不画框
                 vis_output = visualizer.draw_instance_predictions(predictions=instances)
-
+                # vis_output=None
         return predictions, vis_output
 
     def _frame_from_video(self, video):

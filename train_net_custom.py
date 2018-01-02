@@ -8,6 +8,8 @@ from torch.nn.parallel import DistributedDataParallel
 import time
 import datetime
 
+os.environ['CUDA_VISIBLE_DEVICES']="0,1,2,3"
+
 from fvcore.common.timer import Timer
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
@@ -78,6 +80,7 @@ def do_test(cfg, model):
                 evaluator = CustomCOCOEvaluator(dataset_name, cfg, True, output_folder)
             else:
                 evaluator = COCOEvaluator(dataset_name, cfg, True, output_folder)
+                print("COCOEvaluator")
         elif evaluator_type == 'oid':
             evaluator = OIDEvaluator(dataset_name, cfg, True, output_folder)
         else:
@@ -268,3 +271,6 @@ if __name__ == "__main__":
         dist_url=args.dist_url,
         args=(args,),
     )
+
+# --num-gpus 4 --config-file /home/lq/projects/Detic/configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml  "MODEL.WEIGHTS" "/home/lq/projects/Detic/models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+#model_0:/home/lq/projects/Detic/output/Detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size_model_0/model_final.pth

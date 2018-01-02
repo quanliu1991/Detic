@@ -54,9 +54,6 @@ class CustomRCNN(GeneralizedRCNN):
             self.num_classes = kwargs.pop('num_classes')
             self.num_sample_cats = kwargs.pop('num_sample_cats')
         super().__init__(**kwargs)
-        # 冻结
-        self.backbone.requires_grad_(False)
-
         assert self.proposal_generator is not None
         if self.with_caption:
             assert not self.dynamic_classifier

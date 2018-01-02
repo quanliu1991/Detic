@@ -3,4 +3,4 @@ MODEL:
   ROI_BOX_HEAD:
     USE_ZEROSHOT_CLS: True
 DATASETS:
-  TRAIN: ("lvis_v1_train_norare",)
+  TRAIN: ("mts_train",)

@@ -41,9 +41,10 @@ def reset_cls_test(model, cls_path, num_classes):
     zs_weight = torch.cat(
         [zs_weight, zs_weight.new_zeros((zs_weight.shape[0], 1))], 
         dim=1) # D x (C + 1)
-    if model.roi_heads.box_predictor[0].cls_score.norm_weight:
-        zs_weight = F.normalize(zs_weight, p=2, dim=0)
-    zs_weight = zs_weight.to(model.device)
-    for k in range(len(model.roi_heads.box_predictor)):
-        del model.roi_heads.box_predictor[k].cls_score.zs_weight
-        model.roi_heads.box_predictor[k].cls_score.zs_weight = zs_weight
+    if not isinstance(model.roi_heads.box_predictor[0].cls_score,torch.nn.Linear):
+        if model.roi_heads.box_predictor[0].cls_score.norm_weight:
+            zs_weight = F.normalize(zs_weight, p=2, dim=0)
+        zs_weight = zs_weight.to(model.device)
+        for k in range(len(model.roi_heads.box_predictor)):
+            del model.roi_heads.box_predictor[k].cls_score.zs_weight
+            model.roi_heads.box_predictor[k].cls_score.zs_weight = zs_weight

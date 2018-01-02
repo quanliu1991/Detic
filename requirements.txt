@@ -7,4 +7,4 @@ fasttext
 scikit-learn
 lvis
 nltk
-git+https://github.com/openai/CLIP.git
+# git+https://github.com/openai/CLIP.git

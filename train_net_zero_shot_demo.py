@@ -8,6 +8,8 @@ from torch.nn.parallel import DistributedDataParallel
 import time
 import datetime
 
+os.environ['CUDA_VISIBLE_DEVICES']="6,7"
+
 from fvcore.common.timer import Timer
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer, PeriodicCheckpointer
@@ -53,15 +55,26 @@ from detic.data.datasets import register_mts2coco
 
 
 logger = logging.getLogger("detectron2")
+def get_clip_embeddings(vocabulary, prompt='a '):
+    from detic.modeling.text.text_encoder import build_text_encoder
+    text_encoder = build_text_encoder(pretrain=True)
+    text_encoder.eval()
+    texts = [prompt + x for x in vocabulary]
+    emb = text_encoder(texts).detach().permute(1, 0).contiguous().cpu()
+    return emb
 
 def do_test(cfg, model):
     results = OrderedDict()
     for d, dataset_name in enumerate(cfg.DATASETS.TEST):
+        metadata = MetadataCatalog.get("mts_val_fewshot_5")
+        # metadata.thing_classes = args.custom_vocabulary.split(',')
+        classifier = get_clip_embeddings(metadata.thing_classes)
+        num_classes = len(metadata.thing_classes)
         if cfg.MODEL.RESET_CLS_TESTS:
             reset_cls_test(
                 model,
-                cfg.MODEL.TEST_CLASSIFIERS[d],
-                cfg.MODEL.TEST_NUM_CLASSES[d])
+                classifier,
+                num_classes)
         mapper = None if cfg.INPUT.TEST_INPUT_TYPE == 'default' \
             else DatasetMapper(
                 cfg, False, augmentations=build_custom_augmentation(cfg, False))
@@ -78,6 +91,7 @@ def do_test(cfg, model):
                 evaluator = CustomCOCOEvaluator(dataset_name, cfg, True, output_folder)
             else:
                 evaluator = COCOEvaluator(dataset_name, cfg, True, output_folder)
+                print("COCOEvaluator")
         elif evaluator_type == 'oid':
             evaluator = OIDEvaluator(dataset_name, cfg, True, output_folder)
         else:
@@ -181,9 +195,13 @@ def do_train(cfg, model, resume=False):
             storage.put_scalars(time=step_time)
             data_timer.reset()
             scheduler.step()
+            # if (cfg.TEST.EVAL_PERIOD > 0
+            #     and iteration % cfg.TEST.EVAL_PERIOD == 0
+            #     and iteration != max_iter):
+            #     do_test(cfg, model)
+            #     comm.synchronize()
 
-            if (cfg.TEST.EVAL_PERIOD > 0
-                and iteration % cfg.TEST.EVAL_PERIOD == 0
+            if (iteration % 100== 0
                 and iteration != max_iter):
                 do_test(cfg, model)
                 comm.synchronize()
@@ -237,8 +255,11 @@ def main(args):
             model, device_ids=[comm.get_local_rank()], broadcast_buffers=False,
             find_unused_parameters=cfg.FIND_UNUSED_PARAM
         )
-
-    do_train(cfg, model, resume=args.resume)
+    # logger.info("========== ")
+    # do_test(cfg, model)
+    # logger.info("========== ")
+    # do_train(cfg, model, resume=args.resume)
+    # logger.info("========== ")
     return do_test(cfg, model)
 
 
@@ -268,3 +289,6 @@ if __name__ == "__main__":
         dist_url=args.dist_url,
         args=(args,),
     )
+
+# --num-gpus 4 --config-file /home/lq/projects/Detic/configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml  "MODEL.WEIGHTS" "/home/lq/projects/Detic/models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+#model_0:/home/lq/projects/Detic/output/Detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size_model_0/model_final.pth
